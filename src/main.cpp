@@ -78,6 +78,8 @@ int main() {
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
     cout << sdata << endl;
+    Eigen::VectorXd state(6);
+
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
       if (s != "") {
@@ -93,13 +95,31 @@ int main() {
           double v = j[1]["speed"];
 
           /*
-          * TODO: Calculate steeering angle and throttle using MPC.
+          * DONE: Calculate steeering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
+          auto coeffs = polyfit(ptsx, ptsy, 3);
+          // The cross track error is calculated by evaluating at polynomial at x, f(x)
+          // and subtracting y.
+
+          // NOTE: from MPC.cpp
+          // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
+          // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
+          double cte = polyeval(coeffs, px) - py; // TODO
+          // Due to the sign starting at 0, the orientation error is -f'(x).
+          // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
+          double epsi = -atan(coeffs[1]);  // TODO
+
+          state << px, py, psi, v, cte, epsi;
+
           double steer_value;
           double throttle_value;
+
+          auto vars = mpc.Solve(state, coeffs);
+          steer_value = vars[6];
+          throttle_value = vars[7];
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
