@@ -65,6 +65,17 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+// A wrapper
+Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
+  size_t size_x = xs.size();
+  size_t size_y = ys.size();
+
+  Eigen::Map<Eigen::MatrixXd> mx(&xs[size_x], size_x, size_x);
+  Eigen::Map<Eigen::MatrixXd> my(&xs[size_y], size_y, size_y);
+
+  return polyfit(mx, my, order);
+}
+
 int main() {
   uWS::Hub h;
 
