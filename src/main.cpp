@@ -65,15 +65,44 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
+// cout helper
+void print_vector(const std::vector<double>& v) {
+  for (const auto& i: v) {
+      std::cout << i << " ";
+  }
+  std::cout << endl;
+}
+
+// cout helper
+void print_eigne_vector(const Eigen::VectorXd& v) {
+  for (int i = 0; i < v.size(); i++) {
+      std::cout << v[i] << " ";
+  }
+  std::cout << endl;
+}
+
 // A wrapper
 Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   size_t size_x = xs.size();
   size_t size_y = ys.size();
 
-  Eigen::Map<Eigen::MatrixXd> mx(&xs[size_x], size_x, size_x);
-  Eigen::Map<Eigen::MatrixXd> my(&xs[size_y], size_y, size_y);
+  double* x_ptr = &xs[0];
+  double* y_ptr = &ys[0];
 
-  return polyfit(mx, my, order);
+  cout << "std: ";
+  print_vector(xs);
+  cout << "std: ";
+  print_vector(ys);
+
+  Eigen::Map<Eigen::VectorXd> vx(x_ptr, size_x);
+  Eigen::Map<Eigen::VectorXd> vy(y_ptr, size_y);
+
+  cout << "Eigen: ";
+  print_eigne_vector(vx);
+  cout << "Eigen: ";
+  print_eigne_vector(vy);
+
+  return polyfit(vx, vy, order);
 }
 
 int main() {
@@ -125,10 +154,18 @@ int main() {
 
           state << px, py, psi, v, cte, epsi;
 
+          cout << "SIM state: ";
+          print_eigne_vector(state);
+
           double steer_value;
           double throttle_value;
 
           auto vars = mpc.Solve(state, coeffs);
+
+          cout << "MPC state: ";
+          print_vector(vars);
+          cout << endl;
+
           steer_value = vars[6];
           throttle_value = vars[7];
 
