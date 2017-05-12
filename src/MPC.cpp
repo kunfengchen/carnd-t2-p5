@@ -6,8 +6,8 @@
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-size_t N = 20;
-double dt = 0.1;
+size_t N = 10;
+double dt = 0.5;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -26,8 +26,8 @@ const double Lf = 2.67;
 double ref_v = 40;
 
 // set the weights of the error function.
-double w_delta = 1.0;
-double w_a = 1.0;
+double w_delta = 100.0;
+double w_a = 500.0;
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -150,6 +150,7 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+
   bool ok = true;
   size_t i;
   typedef CPPAD_TESTVECTOR(double) Dvector;
@@ -265,6 +266,21 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   std::cout << "Cost " << cost << std::endl;
+
+  // print out solution
+  int n = 5;
+
+  for (int i = 0; i < n; i++) {
+    cout << "s" << i << ": "
+         << solution.x[i + x_start + 1] << " "
+         << solution.x[i + y_start + 1] << " "
+         << solution.x[i + psi_start + 1] << " "
+         << solution.x[i + v_start + 1] << " "
+         << solution.x[i + cte_start + 1] << " "
+         << solution.x[i + epsi_start + 1] << " "
+         << solution.x[i + delta_start]  << " "
+         << solution.x[i + a_start] << endl;
+  }
 
   // DONE: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
