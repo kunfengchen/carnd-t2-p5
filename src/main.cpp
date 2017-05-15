@@ -8,6 +8,8 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
+#include "matplotlibcpp.h"
+
 
 // for convenience
 using json = nlohmann::json;
@@ -89,21 +91,44 @@ Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   double* x_ptr = &xs[0];
   double* y_ptr = &ys[0];
 
-  cout << "std: ";
-  print_vector(xs);
-  cout << "std: ";
-  print_vector(ys);
+  // cout << "std: ";
+  // print_vector(xs);
+  // cout << "std: ";
+  // print_vector(ys);
 
   Eigen::Map<Eigen::VectorXd> vx(x_ptr, size_x);
   Eigen::Map<Eigen::VectorXd> vy(y_ptr, size_y);
 
-  cout << "Eigen: ";
-  print_eigne_vector(vx);
-  cout << "Eigen: ";
-  print_eigne_vector(vy);
+  // cout << "Eigen: ";
+  // print_eigne_vector(vx);
+  // cout << "Eigen: ";
+  // print_eigne_vector(vy);
 
   return polyfit(vx, vy, order);
 }
+
+// Caculate the distance from point p to line (ps, pe) using linear algebra
+double distance_to_line(double p_start_x, double p_start_y,
+                        double p_end_x, double p_end_y, double p_x, double p_y) {
+
+  // line vector p to ps
+  double p_ps_x = p_x - p_start_x;
+  double p_ps_y = p_y - p_start_y;
+  // line vector pe to ps
+  double pe_ps_x = p_end_x - p_start_x;
+  double pe_ps_y = p_end_y - p_start_y;
+  // p_ps x pe_ps
+  double cross_product = p_ps_x * pe_ps_y - p_ps_y * pe_ps_x;
+  // norm
+  double norm_pe_ps = std::sqrt(pe_ps_x*pe_ps_x+pe_ps_y*pe_ps_y);
+  double dist = cross_product/norm_pe_ps;
+  cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
+  return dist;
+}
+
+// debug
+int m_debug_tries = 15;
+int m_debug_try = 0;
 
 int main() {
   uWS::Hub h;
@@ -119,6 +144,7 @@ int main() {
     string sdata = string(data).substr(0, length);
     cout << sdata << endl;
     Eigen::VectorXd state(6);
+    m_debug_try++;
 
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
@@ -140,17 +166,20 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          auto coeffs = polyfit(ptsx, ptsy, 3);
+          auto coeffs = polyfit(ptsx, ptsy, 2);
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
 
           // NOTE: from MPC.cpp
           // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
           // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-          double cte = polyeval(coeffs, px) - py; // TODO
+          // double cte = polyeval(coeffs, px) - py; // TODO
+          // double cte = px - ptsx[1];
+          double cte = distance_to_line(ptsx[2], ptsy[2], ptsx[0], ptsy[0], px, py);
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
-          double epsi = -atan(coeffs[1]);  // TODO
+          // double epsi = -atan(coeffs[1]);  // TODO
+          double epsi = 0.0;  // TODO
 
           state << px, py, psi, v, cte, epsi;
 
@@ -167,6 +196,7 @@ int main() {
           cout << endl;
 
           steer_value = vars[6];
+          steer_value = -0.01;// TODO
           throttle_value = vars[7];
 
           json msgJson;
@@ -185,6 +215,22 @@ int main() {
           // SUBMITTING.
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+          // DEBUG
+          if ((m_debug_try % 1) == 0) {
+            matplotlibcpp::figure();
+            matplotlibcpp::xlim(-150, 0);
+            matplotlibcpp::ylim(20, 160);
+            matplotlibcpp::plot(ptsx, ptsy, "ro");
+            matplotlibcpp::annotate("*", ptsx[0], ptsy[0]);
+            matplotlibcpp::annotate("<", ptsx[2], ptsy[2]);
+            matplotlibcpp::plot({px}, {py}, "bo");
+            matplotlibcpp::annotate("x" + std::to_string(cte), px, py);
+          }
+
+          if (m_debug_try > m_debug_tries) {
+             matplotlibcpp::show();
+          }
         }
       } else {
         // Manual driving
@@ -210,6 +256,7 @@ int main() {
 
   h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
+
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

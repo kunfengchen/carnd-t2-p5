@@ -1,13 +1,15 @@
 #include "MPC.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
+#include <cppad/local/limits.hpp>
+#include <cppad/poly.hpp>
 #include "Eigen-3.3/Eigen/Core"
 
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-size_t N = 10;
-double dt = 0.5;
+size_t N = 3;
+double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -20,6 +22,9 @@ double dt = 0.5;
 //
 // This is the length from front to CoG that has a similar radius.
 const double Lf = 2.67;
+// symmetric difference quotient
+// const AD<double> h_ad_double = CppAD::numeric_limits<AD<double>>::epsilon();
+const AD<double> h_ad_double = 1e-8;
 
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity is set to 40 mph.
@@ -28,6 +33,18 @@ double ref_v = 40;
 // set the weights of the error function.
 double w_delta = 100.0;
 double w_a = 500.0;
+
+// DEBUG
+int debug_tries = 3;
+int debug_try = 0;
+std::vector<double> x_vals = {};
+std::vector<double> y_vals = {};
+std::vector<double> psi_vals = {};
+std::vector<double> v_vals = {};
+std::vector<double> cte_vals = {};
+std::vector<double> epsi_vals = {};
+std::vector<double> delta_vals = {};
+std::vector<double> a_vals = {};
 
 // The solver takes all the state variables and actuator
 // variables in a singular vector. Thus, we should to establish
@@ -40,6 +57,16 @@ size_t cte_start = v_start + N;
 size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
+
+// Evaluate a polynomial for AD.
+AD<double> polyevalAD(Eigen::VectorXd coeffs, AD<double> x) {
+  cout << "polyevalAD: x= " << x << endl;
+  AD<double> result = 0.0;
+  for (int i = 0; i < coeffs.size(); i++) {
+    result += coeffs[i] * CppAD::pow(x, i);
+  }
+  return result;
+}
 
 class FG_eval {
  public:
@@ -58,6 +85,8 @@ class FG_eval {
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
 
+    cout << "op(): h_ad_double= " << h_ad_double << endl;
+    cout << "op(): coeffs= " << coeffs << endl;
     // The part of the cost based on the reference state.
     for (int i = 0; i < N - 1; i++) {
       fg[0] += CppAD::pow(vars[cte_start + i + 1] - vars[cte_start + i], 2);
@@ -118,8 +147,27 @@ class FG_eval {
       AD<double> delta0 = vars[delta_start + i];
       AD<double> a0 = vars[a_start + i];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      // AD<double> f0 = coeffs[0] + coeffs[1] * x0;
+      cout << "op(): x0 = " << x0 << endl;
+      AD<double> f0 = polyevalAD(coeffs, x0);
+      // double xi = vars[x_start +i];
+      // AD<double> f0 = polyeval(coeffs, xi);
+      // AD<double> psides0 = CppAD::atan(coeffs[1]);
+      // symmetric difference quotient
+      AD<double> x0h2 = x0+h_ad_double;
+      AD<double> fh2 = polyevalAD(coeffs, x0h2);
+      AD<double> x0h1 = x0-h_ad_double;
+      AD<double> fh1 = polyevalAD(coeffs, x0h1);
+      AD<double> dfdx = (fh2 - fh1) / (2*h_ad_double);
+      // AD<double> dfdx = Poly(1, coeffs, x0);  // f' at x0
+      // double dfdx = CppAD::Poly(1, coeffs, CppAD::Value(x0));  // f' at x0
+      cout << "op(): f0= " << f0 << endl;
+      cout << "op(): x0h2= " << x0h2 << endl;
+      cout << "op(): x0h1= " << x0h1 << endl;
+      cout << "op(): fh2= " << fh2 << endl;
+      cout << "op(): fh1= " << fh1 << endl;
+      cout << "op(): dfdx= " << dfdx << endl;
+      AD<double> psides0 = CppAD::atan(dfdx);
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -135,6 +183,7 @@ class FG_eval {
       fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
       fg[2 + v_start + i] = v1 - (v0 + a0 * dt);
+      // TODO: f0 - y0
       fg[2 + cte_start + i] =
               cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + epsi_start + i] =
@@ -268,7 +317,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   std::cout << "Cost " << cost << std::endl;
 
   // print out solution
-  int n = 5;
+  int n = N-1;
 
   for (int i = 0; i < n; i++) {
     cout << "s" << i << ": "
@@ -281,6 +330,26 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
          << solution.x[i + delta_start]  << " "
          << solution.x[i + a_start] << endl;
   }
+
+  // debug
+  cte_vals.push_back(solution.x[cte_start +1]);
+  delta_vals.push_back(solution.x[delta_start +1]);
+
+  if (debug_try > debug_tries) {
+    // Plot values for debugging
+    /*
+    plt::subplot(2, 1, 1);
+    plt::title("CTE");
+    plt::plot(cte_vals);
+    plt::subplot(2, 1, 2);
+    plt::title("Delta (Radians)");
+    plt::plot(delta_vals);
+
+    plt::show();
+     */
+    // std::exit(1);
+  }
+  debug_try++;
 
   // DONE: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
