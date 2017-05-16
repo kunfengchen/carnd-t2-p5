@@ -122,12 +122,12 @@ double distance_to_line(double p_start_x, double p_start_y,
   // norm
   double norm_pe_ps = std::sqrt(pe_ps_x*pe_ps_x+pe_ps_y*pe_ps_y);
   double dist = cross_product/norm_pe_ps;
-  cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
+  // cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
   return dist;
 }
 
 // debug
-int m_debug_tries = 15;
+int m_debug_tries = 100;
 int m_debug_try = 0;
 
 int main() {
@@ -166,20 +166,33 @@ int main() {
           * Both are in between [-1, 1].
           *
           */
-          auto coeffs = polyfit(ptsx, ptsy, 2);
+          auto coeffs = polyfit(ptsx, ptsy, 3);
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
 
           // NOTE: from MPC.cpp
           // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
           // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-          // double cte = polyeval(coeffs, px) - py; // TODO
-          // double cte = px - ptsx[1];
-          double cte = distance_to_line(ptsx[2], ptsy[2], ptsx[0], ptsy[0], px, py);
+          double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
-          // double epsi = -atan(coeffs[1]);  // TODO
-          double epsi = 0.0;  // TODO
+          // double epsi = psi - std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*(px*px)));
+          // double psides = -std::atan(coeffs[1] + (2*coeffs[2]*ptsx[0]) + (3*coeffs[3]*(ptsx[0]*ptsx[0])));
+
+          //// need to check quardrant
+          double psides = std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*px*px));
+          psides+=pi();
+
+
+          /*
+          double psides = std::atan2(ptsy[2]-ptsy[0], ptsx[2]-ptsx[0]);
+          if (psides < 0) {
+             psides = 2*pi()+psides; // convert (0, -pi) to (pi, 2pi) for third and fourth quadrants.
+          }
+          */
+          cout << "main(): psides= " << psides << endl;
+
+          double epsi = psi - psides;
 
           state << px, py, psi, v, cte, epsi;
 
@@ -194,9 +207,7 @@ int main() {
           cout << "MPC state: ";
           print_vector(vars);
           cout << endl;
-
           steer_value = vars[6];
-          steer_value = -0.01;// TODO
           throttle_value = vars[7];
 
           json msgJson;
@@ -204,9 +215,9 @@ int main() {
           msgJson["throttle"] = throttle_value;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
+
           // Latency
-          // The purpose is to mimic real driving conditions where
-          // the car does actuate the commands instantly.
+          // The purpose is to mimic real driving conditions where // the car does actuate the commands instantly.
           //
           // Feel free to play around with this value but should be to drive
           // around the track with 100ms latency.
@@ -217,19 +228,39 @@ int main() {
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
           // DEBUG
-          if ((m_debug_try % 1) == 0) {
+          if ((m_debug_try % 5) == 0) {
             matplotlibcpp::figure();
-            matplotlibcpp::xlim(-150, 0);
-            matplotlibcpp::ylim(20, 160);
-            matplotlibcpp::plot(ptsx, ptsy, "ro");
+            matplotlibcpp::xlim(-200, 200);
+            matplotlibcpp::ylim(-200, 200);
+            matplotlibcpp::plot(ptsx, ptsy, "go");
             matplotlibcpp::annotate("*", ptsx[0], ptsy[0]);
             matplotlibcpp::annotate("<", ptsx[2], ptsy[2]);
+            matplotlibcpp::annotate(std::to_string(coeffs[0]) + ","
+                    + std::to_string(coeffs[1]) + ","
+                    + std::to_string(coeffs[2]) + ","
+                    + std::to_string(coeffs[3]) + ","
+                    , ptsx[3], ptsy[3]);
+            int np = 100;
+            int startx = ptsx[3] - np/2;
+            vector<double> npx(np);
+            vector<double> npy(np);
+            for (int i = 0; i < np; i++) {
+                npx[i] = startx + i;
+                npy[i] = polyeval(coeffs, npx[i]);
+            }
+            matplotlibcpp::plot(npx, npy, "y");
             matplotlibcpp::plot({px}, {py}, "bo");
-            matplotlibcpp::annotate("x" + std::to_string(cte), px, py);
+            matplotlibcpp::plot(ptsx, ptsy, "g");
+            matplotlibcpp::annotate("x " + std::to_string(cte)
+                                    // + " p:" + std::to_string(psi)
+                                    // + " d:" + std::to_string(psides)
+                                    + " e:" + std::to_string(epsi)
+                                    + " s:" + std::to_string(steer_value), px, py);
           }
 
           if (m_debug_try > m_debug_tries) {
              matplotlibcpp::show();
+             std::exit(1);
           }
         }
       } else {

@@ -1,3 +1,4 @@
+#include <math.h>
 #include "MPC.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
@@ -8,7 +9,7 @@
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-size_t N = 3;
+size_t N = 5;
 double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
@@ -31,8 +32,13 @@ const AD<double> h_ad_double = 1e-8;
 double ref_v = 40;
 
 // set the weights of the error function.
-double w_delta = 100.0;
-double w_a = 500.0;
+double w_delta = 1.0; // 100.0;
+double w_a = 1.0; // 500.0;
+
+std::clock_t cur_time;
+std::clock_t pre_time;
+
+bool isFirstUpdate = true;
 
 // DEBUG
 int debug_tries = 3;
@@ -60,7 +66,7 @@ size_t a_start = delta_start + N - 1;
 
 // Evaluate a polynomial for AD.
 AD<double> polyevalAD(Eigen::VectorXd coeffs, AD<double> x) {
-  cout << "polyevalAD: x= " << x << endl;
+  // cout << "polyevalAD: x= " << x << endl;
   AD<double> result = 0.0;
   for (int i = 0; i < coeffs.size(); i++) {
     result += coeffs[i] * CppAD::pow(x, i);
@@ -85,27 +91,28 @@ class FG_eval {
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
 
-    cout << "op(): h_ad_double= " << h_ad_double << endl;
+    // cout << "op(): h_ad_double= " << h_ad_double << endl;
     cout << "op(): coeffs= " << coeffs << endl;
     // The part of the cost based on the reference state.
+    AD<double> ad_ref_v=ref_v;
     for (int i = 0; i < N - 1; i++) {
       fg[0] += CppAD::pow(vars[cte_start + i + 1] - vars[cte_start + i], 2);
       fg[0] += CppAD::pow(vars[epsi_start + i + 1] - vars[epsi_start + i], 2);
-      fg[0] += CppAD::pow(vars[v_start + i] - ref_v, 2);
+      fg[0] += CppAD::pow(vars[v_start + i] - ad_ref_v, 2);
     }
 
-    /*
     // Minimize the use of actuators.
     for (int i = 0; i < N - 1; i++) {
-      fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      // fg[0] += CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
-    */
 
     // Minimize the value gap between sequential actuations.
     for (int i = 0; i < N - 2; i++) {
-      fg[0] += w_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += w_a * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      // fg[0] += w_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      // fg[0] += w_a * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
     //
@@ -146,7 +153,7 @@ class FG_eval {
       // Only consider the actuation at time t.
       AD<double> delta0 = vars[delta_start + i];
       AD<double> a0 = vars[a_start + i];
-
+/*
       // AD<double> f0 = coeffs[0] + coeffs[1] * x0;
       cout << "op(): x0 = " << x0 << endl;
       AD<double> f0 = polyevalAD(coeffs, x0);
@@ -167,8 +174,21 @@ class FG_eval {
       cout << "op(): fh2= " << fh2 << endl;
       cout << "op(): fh1= " << fh1 << endl;
       cout << "op(): dfdx= " << dfdx << endl;
-      AD<double> psides0 = CppAD::atan(dfdx);
+*/
+      // AD<double> psides0 = -CppAD::atan(dfdx);
+      AD<double> coeffs1 = coeffs[1];
+      AD<double> coeffs2 = coeffs[2];
+      AD<double> coeffs3 = coeffs[3];
+      AD<double> psides0 = CppAD::atan(coeffs1 + (2*coeffs2*x0) + (3*coeffs3*(x0*x0)));
+      // TODO
+      psides0 += M_PI;
 
+      cout << "OOOOOop(): psides0= " << psides0 << endl;
+
+      AD<double> ad_dt=dt;
+      cout << "op(): ad_dt= " << ad_dt << endl;
+
+      AD<double> ad_Lf=Lf;
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
       //
@@ -179,15 +199,17 @@ class FG_eval {
       // v_[t+1] = v[t] + a[t] * dt
       // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
       // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-      fg[2 + x_start + i] = x1 - (x0 + v0 * CppAD::cos(psi0) * dt);
-      fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * dt);
-      fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / Lf * dt);
+      fg[2 + x_start + i] = x1 - (x0 + v0 * CppAD::cos(psi0) * ad_dt);
+      fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * ad_dt);
+      fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / ad_Lf * ad_dt);
       fg[2 + v_start + i] = v1 - (v0 + a0 * dt);
       // TODO: f0 - y0
+      // fg[2 + cte_start + i] =
+      //          cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
-              cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+              cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + epsi_start + i] =
-              epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+             epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
     }
   }
 };
@@ -199,6 +221,13 @@ MPC::MPC() {}
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
+  if (isFirstUpdate) {
+    pre_time = std::clock();
+    isFirstUpdate = false;
+  }
+
+  cur_time = std::clock();
+  dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
 
   bool ok = true;
   size_t i;
@@ -331,13 +360,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
          << solution.x[i + a_start] << endl;
   }
 
+  pre_time = cur_time;
+
   // debug
   cte_vals.push_back(solution.x[cte_start +1]);
   delta_vals.push_back(solution.x[delta_start +1]);
 
+    /*
   if (debug_try > debug_tries) {
     // Plot values for debugging
-    /*
     plt::subplot(2, 1, 1);
     plt::title("CTE");
     plt::plot(cte_vals);
@@ -346,10 +377,10 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     plt::plot(delta_vals);
 
     plt::show();
-     */
     // std::exit(1);
   }
   debug_try++;
+     */
 
   // DONE: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
