@@ -227,6 +227,7 @@ int main() {
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
+            /*
           // DEBUG
           if ((m_debug_try % 5) == 0) {
             matplotlibcpp::figure();
@@ -262,6 +263,7 @@ int main() {
              matplotlibcpp::show();
              std::exit(1);
           }
+             */
         }
       } else {
         // Manual driving

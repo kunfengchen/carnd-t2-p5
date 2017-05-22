@@ -202,14 +202,14 @@ class FG_eval {
       fg[2 + x_start + i] = x1 - (x0 + v0 * CppAD::cos(psi0) * ad_dt);
       fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * ad_dt);
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / ad_Lf * ad_dt);
-      fg[2 + v_start + i] = v1 - (v0 + a0 * dt);
+      fg[2 + v_start + i] = v1 - (v0 + a0 * ad_dt);
       // TODO: f0 - y0
       // fg[2 + cte_start + i] =
       //          cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
-              cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * dt));
+              cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * ad_dt));
       fg[2 + epsi_start + i] =
-             epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * dt);
+             epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * ad_dt);
     }
   }
 };
@@ -227,7 +227,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   cur_time = std::clock();
-  dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
+
+  // Dynamic dt: Not working yet...
+  // dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
 
   bool ok = true;
   size_t i;
@@ -276,8 +278,10 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // degrees (values in radians).
   // NOTE: Feel free to change this to something else.
   for (int i = delta_start; i < a_start; i++) {
-    vars_lowerbound[i] = -0.436332;
-    vars_upperbound[i] = 0.436332;
+    // vars_lowerbound[i] = -0.436332;
+    // vars_upperbound[i] = 0.436332;
+    vars_lowerbound[i] = -0.3;
+    vars_upperbound[i] = 0.3;
   }
 
   // Acceleration/decceleration upper and lower limits.
