@@ -391,8 +391,24 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   //
   // {...} is shorthand for creating a vector, so auto x1 = {1.0,2.0}
   // creates a 2 element double vector.
+  /*
   return {solution.x[x_start + 1],   solution.x[y_start + 1],
           solution.x[psi_start + 1], solution.x[v_start + 1],
           solution.x[cte_start + 1], solution.x[epsi_start + 1],
           solution.x[delta_start],   solution.x[a_start]};
+  */
+  int size_ret = N*8;
+  std::vector<double> ret_vector(size_ret);
+  for (int i=0; i<N-1; i++) {
+    ret_vector[i*8+0] = solution.x[x_start + 1 + i];
+    ret_vector[i*8+1] = solution.x[y_start + 1 + i];
+    ret_vector[i*8+2] = solution.x[psi_start + 1 + i];
+    ret_vector[i*8+3] = solution.x[v_start + 1 + i];
+    ret_vector[i*8+4] = solution.x[cte_start + 1 + i];
+    ret_vector[i*8+5] = solution.x[epsi_start + 1 + i];
+    ret_vector[i*8+6] = solution.x[delta_start + i];
+    ret_vector[i*8+7] = solution.x[a_start + i];
+  }
+
+  return ret_vector;
 }

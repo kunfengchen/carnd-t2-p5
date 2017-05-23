@@ -107,7 +107,10 @@ Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   return polyfit(vx, vy, order);
 }
 
-// Caculate the distance from point p to line (ps, pe) using linear algebra
+/**
+ * Caculate the distance from point p to line (ps, pe) using linear algebra
+ * Used in map coordination
+ */
 double distance_to_line(double p_start_x, double p_start_y,
                         double p_end_x, double p_end_y, double p_x, double p_y) {
 
@@ -124,6 +127,20 @@ double distance_to_line(double p_start_x, double p_start_y,
   double dist = cross_product/norm_pe_ps;
   // cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
   return dist;
+}
+
+/**
+ * Translate coord from map to car
+ * Formula suggested from class discussion
+ * Counter-clockwise
+ */
+void to_car_coord (double src_map_x, double src_map_y,
+                   double theta, double car_map_x, double car_map_y,
+                    double& car_x, double& car_y) {
+  double dis_x = src_map_x - car_map_x;
+  double dis_y = src_map_y - car_map_y;
+  car_x = dis_x*std::cos(theta) + dis_y*std::sin(theta);
+  car_y = -dis_x*std::sin(theta) + dis_y*std::cos(theta);
 }
 
 // debug
@@ -207,12 +224,47 @@ int main() {
           cout << "MPC state: ";
           print_vector(vars);
           cout << endl;
-          steer_value = vars[6];
+          ///// steer_value = vars[6];
+          steer_value = -0.01;
           throttle_value = vars[7];
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
+
+          //Display the MPC predicted trajectory 
+          int size_n = 5;
+          vector<double> mpc_x_vals(size_n);
+          vector<double> mpc_y_vals(size_n);
+
+          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+          // the points in the simulator are connected by a Green line
+          for (int i=0; i<size_n-1; i++) {
+            // cout << " map coor: " << vars[0 + i*8] << ", " << vars[1 + i*8] << std::endl;
+            to_car_coord(vars[0 + i*8], vars[1 + i*8], psi, px, py, mpc_x_vals[i], mpc_y_vals[i]);
+            // cout << " car coor: " << mpc_x_vals[i] << ", " << mpc_y_vals[i] << std::endl;
+          }
+
+          msgJson["mpc_x"] = mpc_x_vals;
+          msgJson["mpc_y"] = mpc_y_vals;
+
+          //Display the waypoints/reference line
+          int size_mpc = ptsx.size();
+          vector<double> next_x_vals(size_mpc);
+          vector<double> next_y_vals(size_mpc);
+
+          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+          // the points in the simulator are connected by a Yellow line
+          for (int i = 0; i < size_mpc; i++) {
+            cout << " map coor: " << ptsx[i] << ", " << ptsy[i] << std::endl;
+            to_car_coord(ptsx[i], ptsy[i], psi, px, py, next_x_vals[i], next_y_vals[i]);
+            cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
+          }
+
+          msgJson["next_x"] = next_x_vals;
+          msgJson["next_y"] = next_y_vals;
+
+
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
 
