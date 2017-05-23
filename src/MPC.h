@@ -10,6 +10,8 @@ class MPC {
  public:
   MPC();
 
+  size_t size_n;
+
   virtual ~MPC();
 
   // Solve the model given an initial state and polynomial coefficients.

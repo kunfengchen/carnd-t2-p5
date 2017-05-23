@@ -144,7 +144,7 @@ void to_car_coord (double src_map_x, double src_map_y,
 }
 
 // debug
-int m_debug_tries = 100;
+int m_debug_tries = 5;
 int m_debug_try = 0;
 
 int main() {
@@ -178,28 +178,43 @@ int main() {
           double v = j[1]["speed"];
 
           /*
-          * DONE: Calculate steeering angle and throttle using MPC.
+          * DONE: Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          auto coeffs = polyfit(ptsx, ptsy, 3);
+          //Display the waypoints/reference line
+          int size_points = ptsx.size();
+          vector<double> next_x_vals(size_points);
+          vector<double> next_y_vals(size_points);
+
+          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
+          // the points in the simulator are connected by a Yellow line
+          for (int i = 0; i < size_points; i++) {
+            // cout << " map coor: " << ptsx[i] << ", " << ptsy[i] << std::endl;
+            to_car_coord(ptsx[i], ptsy[i], psi, px, py, next_x_vals[i], next_y_vals[i]);
+            // cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
+          }
+
+          /// auto coeffs = polyfit(ptsx, ptsy, 3);  /// Using map coordinate
+          /// According to class discussion, using car coordiante is easier.
+          auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinate
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
 
           // NOTE: from MPC.cpp
           // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
           // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-          double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);
+          /// double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Map coordinate
+          double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Car coordinate
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           // double epsi = psi - std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*(px*px)));
           // double psides = -std::atan(coeffs[1] + (2*coeffs[2]*ptsx[0]) + (3*coeffs[3]*(ptsx[0]*ptsx[0])));
 
-          //// need to check quardrant
+          //// need to check quardrant ? maybe for Map coordinate
           double psides = std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*px*px));
-          psides+=pi();
-
+          /// psides+=pi();
 
           /*
           double psides = std::atan2(ptsy[2]-ptsy[0], ptsx[2]-ptsx[0]);
@@ -207,11 +222,18 @@ int main() {
              psides = 2*pi()+psides; // convert (0, -pi) to (pi, 2pi) for third and fourth quadrants.
           }
           */
+
+          /// Car coordinates
+          double car_px = 0.0;
+          double car_py = 0.0;
+          double car_psi = 0.0;
           cout << "main(): psides= " << psides << endl;
+          psi = 0;  /// Car coorinate
 
-          double epsi = psi - psides;
+          /// double epsi = psi - psides;
+          double epsi = car_psi - psides;
 
-          state << px, py, psi, v, cte, epsi;
+          state << car_px, car_py, car_psi, v, cte, epsi;
 
           cout << "SIM state: ";
           print_eigne_vector(state);
@@ -221,52 +243,44 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs);
 
-          cout << "MPC state: ";
-          print_vector(vars);
-          cout << endl;
-          ///// steer_value = vars[6];
-          steer_value = -0.01;
+          /// cout << "MPC state: ";
+          /// print_vector(vars);
+          /// cout << endl;
+          steer_value = -vars[6];
+          /// steer_value = -0.01;
           throttle_value = vars[7];
+          std::cout << "STEER_VALUE= " << steer_value
+                    << " THROTTLE= " << throttle_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
 
           //Display the MPC predicted trajectory 
-          int size_n = 5;
-          vector<double> mpc_x_vals(size_n);
-          vector<double> mpc_y_vals(size_n);
+          int size_n = mpc.size_n;
+          vector<double> mpc_x_vals(size_n-1);
+          vector<double> mpc_y_vals(size_n-1);
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
           for (int i=0; i<size_n-1; i++) {
-            // cout << " map coor: " << vars[0 + i*8] << ", " << vars[1 + i*8] << std::endl;
-            to_car_coord(vars[0 + i*8], vars[1 + i*8], psi, px, py, mpc_x_vals[i], mpc_y_vals[i]);
-            // cout << " car coor: " << mpc_x_vals[i] << ", " << mpc_y_vals[i] << std::endl;
+            /// cout << " mpc map coor: " << vars[0 + i*8] << ", " << vars[1 + i*8] << std::endl;
+            /// to_car_coord(vars[0 + i*8], vars[1 + i*8], psi, px, py, mpc_x_vals[i], mpc_y_vals[i]);
+            mpc_x_vals[i] = vars[0 + i*8];
+            mpc_y_vals[i] = vars[1 + i*8];
+            cout << " mpc car coor: " << mpc_x_vals[i] << ", " << mpc_y_vals[i] << std::endl;
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
           msgJson["mpc_y"] = mpc_y_vals;
 
-          //Display the waypoints/reference line
-          int size_mpc = ptsx.size();
-          vector<double> next_x_vals(size_mpc);
-          vector<double> next_y_vals(size_mpc);
-
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
-          for (int i = 0; i < size_mpc; i++) {
-            cout << " map coor: " << ptsx[i] << ", " << ptsy[i] << std::endl;
-            to_car_coord(ptsx[i], ptsy[i], psi, px, py, next_x_vals[i], next_y_vals[i]);
-            cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
-          }
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+          /// std::cout << msg << std::endl;
 
           // Latency
           // The purpose is to mimic real driving conditions where // the car does actuate the commands instantly.
@@ -281,7 +295,7 @@ int main() {
 
             /*
           // DEBUG
-          if ((m_debug_try % 5) == 0) {
+          if ((m_debug_try % 2) == 0) {
             matplotlibcpp::figure();
             matplotlibcpp::xlim(-200, 200);
             matplotlibcpp::ylim(-200, 200);

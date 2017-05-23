@@ -9,7 +9,7 @@
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-size_t N = 5;
+size_t N = 15;
 double dt = 0.1;
 
 // This value assumes the model presented in the classroom is used.
@@ -91,8 +91,8 @@ class FG_eval {
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
 
-    // cout << "op(): h_ad_double= " << h_ad_double << endl;
-    cout << "op(): coeffs= " << coeffs << endl;
+    ///  cout << "op(): h_ad_double= " << h_ad_double << endl;
+    /// cout << "op(): coeffs= " << coeffs << endl;
     // The part of the cost based on the reference state.
     AD<double> ad_ref_v=ref_v;
     for (int i = 0; i < N - 1; i++) {
@@ -181,12 +181,12 @@ class FG_eval {
       AD<double> coeffs3 = coeffs[3];
       AD<double> psides0 = CppAD::atan(coeffs1 + (2*coeffs2*x0) + (3*coeffs3*(x0*x0)));
       // TODO
-      psides0 += M_PI;
+      /// psides0 += M_PI;
 
       cout << "OOOOOop(): psides0= " << psides0 << endl;
 
       AD<double> ad_dt=dt;
-      cout << "op(): ad_dt= " << ad_dt << endl;
+      /// cout << "op(): ad_dt= " << ad_dt << endl;
 
       AD<double> ad_Lf=Lf;
       // Here's `x` to get you started.
@@ -227,6 +227,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   cur_time = std::clock();
+  size_n = N;
 
   // Dynamic dt: Not working yet...
   // dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
@@ -347,44 +348,68 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Cost
   auto cost = solution.obj_value;
-  std::cout << "Cost " << cost << std::endl;
+  std::cout << "Cost " << cost << " success " << solution.status<< std::endl;
 
   // print out solution
   int n = N-1;
 
   for (int i = 0; i < n; i++) {
     cout << "s" << i << ": "
-         << solution.x[i + x_start + 1] << " "
-         << solution.x[i + y_start + 1] << " "
-         << solution.x[i + psi_start + 1] << " "
-         << solution.x[i + v_start + 1] << " "
-         << solution.x[i + cte_start + 1] << " "
-         << solution.x[i + epsi_start + 1] << " "
+         << solution.x[i + x_start] << " "
+         << solution.x[i + y_start] << " "
+         << solution.x[i + psi_start] << " "
+         << solution.x[i + v_start] << " "
+         << solution.x[i + cte_start] << " "
+         << solution.x[i + epsi_start] << " "
          << solution.x[i + delta_start]  << " "
          << solution.x[i + a_start] << endl;
   }
+  cout << "s" << n << ": "
+       << solution.x[n + x_start] << " "
+       << solution.x[n + y_start] << " "
+       << solution.x[n + psi_start] << " "
+       << solution.x[n + v_start] << " "
+       << solution.x[n + cte_start] << " "
+       << solution.x[n + epsi_start] << std::endl;
+
+    /*
+  for (int i=0; i < 6*N; i++) {
+    if (i % N == 0) {
+      std::cout << std::endl;
+    }
+    std::cout << solution.x[i] << " ";
+  }
+  std::cout << std::endl;
+     */
+
+  /*
+  for (int i=6*N; i < solution.x.size(); i++) {
+    std::cout << solution.x[i] << " ";
+  }
+  std::cout << std::endl << std::endl;
+   */
 
   pre_time = cur_time;
 
-  // debug
-  cte_vals.push_back(solution.x[cte_start +1]);
-  delta_vals.push_back(solution.x[delta_start +1]);
+  /*
+// debug
+cte_vals.push_back(solution.x[cte_start +1]);
+delta_vals.push_back(solution.x[delta_start +1]);
 
-    /*
-  if (debug_try > debug_tries) {
-    // Plot values for debugging
-    plt::subplot(2, 1, 1);
-    plt::title("CTE");
-    plt::plot(cte_vals);
-    plt::subplot(2, 1, 2);
-    plt::title("Delta (Radians)");
-    plt::plot(delta_vals);
+if (debug_try > debug_tries) {
+  // Plot values for debugging
+  plt::subplot(2, 1, 1);
+  plt::title("CTE");
+  plt::plot(cte_vals);
+  plt::subplot(2, 1, 2);
+  plt::title("Delta (Radians)");
+  plt::plot(delta_vals);
 
-    plt::show();
-    // std::exit(1);
-  }
-  debug_try++;
-     */
+  plt::show();
+  // std::exit(1);
+}
+debug_try++;
+   */
 
   // DONE: Return the first actuator values. The variables can be accessed with
   // `solution.x[i]`.
@@ -397,7 +422,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
           solution.x[cte_start + 1], solution.x[epsi_start + 1],
           solution.x[delta_start],   solution.x[a_start]};
   */
-  int size_ret = N*8;
+  int size_ret = (N-1)*8;
   std::vector<double> ret_vector(size_ret);
   for (int i=0; i<N-1; i++) {
     ret_vector[i*8+0] = solution.x[x_start + 1 + i];
