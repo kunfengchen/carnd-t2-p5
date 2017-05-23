@@ -197,7 +197,13 @@ int main() {
           }
 
           /// auto coeffs = polyfit(ptsx, ptsy, 3);  /// Using map coordinate
+
           /// According to class discussion, using car coordiante is easier.
+          /// Car coordinates
+          double car_px = 0.0;
+          double car_py = 0.0;
+          double car_psi = 0.0;
+
           auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinate
           // The cross track error is calculated by evaluating at polynomial at x, f(x)
           // and subtracting y.
@@ -217,7 +223,7 @@ int main() {
           // double psides = -std::atan(coeffs[1] + (2*coeffs[2]*ptsx[0]) + (3*coeffs[3]*(ptsx[0]*ptsx[0])));
 
           //// need to check quardrant ? maybe for Map coordinate
-          double psides = std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*px*px));
+          double psides = std::atan(coeffs[1] + (2*coeffs[2]*car_px) + (3*coeffs[3]*car_px*car_px));
           /// psides+=pi();
 
           /*
@@ -227,12 +233,7 @@ int main() {
           }
           */
 
-          /// Car coordinates
-          double car_px = 0.0;
-          double car_py = 0.0;
-          double car_psi = 0.0;
           cout << "main(): psides= " << psides << endl;
-          psi = 0;  /// Car coorinate
 
           /// double epsi = psi - psides;
           double epsi = car_psi - psides;

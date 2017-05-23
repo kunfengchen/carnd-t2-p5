@@ -206,8 +206,10 @@ class FG_eval {
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / ad_Lf * ad_dt);
       fg[2 + v_start + i] = v1 - (v0 + a0 * ad_dt);
       // TODO: f0 - y0
+      /// fg[2 + cte_start + i] =
+      ///        cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
-             cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+              cte1 - (cte0 + (f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       /// fg[2 + cte_start + i] =
       ///         cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * ad_dt));
       fg[2 + epsi_start + i] =
