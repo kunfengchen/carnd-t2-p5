@@ -32,8 +32,8 @@ const AD<double> h_ad_double = 1e-8;
 double ref_v = 40;
 
 // set the weights of the error function.
-double w_delta = 1.0; // 100.0;
-double w_a = 1.0; // 500.0;
+double w_delta = 100.0;
+double w_a = 500.0;
 
 std::clock_t cur_time;
 std::clock_t pre_time;
@@ -103,16 +103,16 @@ class FG_eval {
 
     // Minimize the use of actuators.
     for (int i = 0; i < N - 1; i++) {
-      // fg[0] += CppAD::pow(vars[delta_start + i], 2);
+      fg[0] += CppAD::pow(vars[delta_start + i], 2);
       fg[0] += CppAD::pow(vars[a_start + i], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (int i = 0; i < N - 2; i++) {
-      // fg[0] += w_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      // fg[0] += w_a * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
-      fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      fg[0] += w_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      fg[0] += w_a * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
+      /// fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
+      /// fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
     //
@@ -175,6 +175,8 @@ class FG_eval {
       cout << "op(): fh1= " << fh1 << endl;
       cout << "op(): dfdx= " << dfdx << endl;
 */
+      AD<double> f0 = polyevalAD(coeffs, x0);
+
       // AD<double> psides0 = -CppAD::atan(dfdx);
       AD<double> coeffs1 = coeffs[1];
       AD<double> coeffs2 = coeffs[2];
@@ -204,10 +206,10 @@ class FG_eval {
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / ad_Lf * ad_dt);
       fg[2 + v_start + i] = v1 - (v0 + a0 * ad_dt);
       // TODO: f0 - y0
-      // fg[2 + cte_start + i] =
-      //          cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
-              cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * ad_dt));
+             cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+      /// fg[2 + cte_start + i] =
+      ///         cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * ad_dt));
       fg[2 + epsi_start + i] =
              epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * ad_dt);
     }

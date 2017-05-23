@@ -206,7 +206,11 @@ int main() {
           // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
           // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
           /// double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Map coordinate
-          double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Car coordinate
+          /// double cte = distance_to_line(next_x_vals[3], next_y_vals[3], next_x_vals[0], next_y_vals[0], 0.0, 0.0);  /// Using Car coordinate
+          /// double cte = distance_to_line(next_x_vals[0], next_y_vals[0], next_x_vals[3], next_y_vals[3], 0.0, 0.0);  /// Using Car coordinate
+          double cte = polyeval(coeffs, 0) - 0; /// car coordinates
+
+          std::cout << "CTE= " << cte << std::endl;
           // Due to the sign starting at 0, the orientation error is -f'(x).
           // derivative of coeffs[0] + coeffs[1] * x -> coeffs[1]
           // double epsi = psi - std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*(px*px)));
