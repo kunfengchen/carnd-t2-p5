@@ -9,20 +9,42 @@
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-//////// latency 100m seconds
-/// size_t N = 15;
+//////// Test with latency 100m seconds
+/// size_t N = 15; // ok.
 /// Too big, cause more instabilities or large Costs   size_t N = 20;
+
+///// MY NOTE: chosen N
+/////    The more N, there are more future states / longer horizon will be predicted and
+/////    will have longer time of confident. But it will need time
+/////    to compute and increase the latency.
+/////    The fewer N, there are fewer future states / shorted horizion will be predicted and
+/////    will have less time of confident. But it requires less compute and will help on the latency.
+
 size_t N = 10;
-//// Too small, unstable    double dt = 0.01;
-//// Occationally unstable
+
+//// Too small, unstable.    double dt = 0.01;
+
+//// Occasionally unstable.
 //// make the car wobbling  double dt = 0.05;
+
 //// Too far of horizon with N=10, no good with N=6,  double dt = 0.2;
+
 //// double dt = 0.03;  // with N=15, w_delta=500, 40 miles/hour, but tires touch the curbs.
+
 //// double dt = 0.05;  // with N=15, w_delta=800, reach 50 miles/hour, but tires touch the red lines.
+
+//// Cannot finish one loop. double dt = 0.2;
+
+//// No good.  double dt = 0.15;
+
+
+///// MY NOTE: dt
+/////   Smaller dt makes car more agile and sensitive, easier to out of control.
+/////   But smaller dt can make car go faster and counter lantency problem.
+/////   Bigger dt makes car more stable but less responsive, and it's limited to the latnecy.
+
 double dt = 0.1;  /// can only reach 40 miles/hour after good tune with N=10, w_delta=80.
 
-//// Cannot finish one loop double dt = 0.2;
-//// no good  double dt = 0.15;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -42,16 +64,35 @@ const AD<double> h_ad_double = 1e-8;
 // Both the reference cross track and orientation errors are 0.
 // The reference velocity
 /// double ref_v = 40;  /// The tire is very close to yellow line at one point.
+
+/////  MY NOTE: Tuning ref_v
+/////    If ref_v is high, more then 50 miles/hour,
+/////      car will go out of control due to the latency and the high cost.
+/////    Start with ref_v = 20, the car is more stable and easier to debug and turn the prarameters.
+/////    Trie ref_v up to 80, tuning with dt and w_delta and still hard to finish one lap.
+
 double ref_v = 30;
 
 // set the weights of the error function.
 
 /// Not mush effect  double w_delta = 1000.0;
+
 /// Over penalized. Have hard time make turns on 20 miles/hour  double w_delta = 10000.0;
+
 /// Good, but a bit under steering.  double w_delta = 100;
+
 /// OK. Sensetive to turns. Car run wobbly.  double w_delta = 10;
+
 /// Good. double w_delta = 80;
+
+///// MY NOTE: Tuning w_delta
+/////   If w_delta is too small, the car is more sensitive and and spinning out control soon.
+/////   If w_delat is too big, the car is tend to more straight, under steering, and then miss the sharp turns.
+
 double w_delta = 80;
+
+///// MY NOTE: Overall, w_a doesn't affect too much.
+
 /// Good. double w_a = 5000.0;
 double w_a = 500.0;
 
@@ -114,7 +155,7 @@ class FG_eval {
     // Any additions to the cost should be added to `fg[0]`.
     fg[0] = 0;
 
-    ///  cout << "op(): h_ad_double= " << h_ad_double << endl;
+    /// cout << "op(): h_ad_double= " << h_ad_double << endl;
     /// cout << "op(): coeffs= " << coeffs << endl;
     // The part of the cost based on the reference state.
     AD<double> ad_ref_v=ref_v;
@@ -196,9 +237,10 @@ class FG_eval {
       cout << "op(): fh1= " << fh1 << endl;
       cout << "op(): dfdx= " << dfdx << endl;
 */
+      /// AD<double> psides0 = -CppAD::atan(dfdx);
+
       AD<double> f0 = polyevalAD(coeffs, x0);
 
-      // AD<double> psides0 = -CppAD::atan(dfdx);
       AD<double> coeffs1 = coeffs[1];
       AD<double> coeffs2 = coeffs[2];
       AD<double> coeffs3 = coeffs[3];
@@ -253,6 +295,7 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   /// Dynamic dt:
   /// Very unstable car running...   dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
+  /// Using fixed dt.
 
   bool ok = true;
   size_t i;

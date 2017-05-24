@@ -319,15 +319,28 @@ int main() {
           /// std::cout << msg << std::endl;
 
           // Latency
-          // The purpose is to mimic real driving conditions where // the car does actuate the commands instantly.
+          // The purpose is to mimic real driving conditions where
+          // the car does actuate the commands instantly.
           //
           // Feel free to play around with this value but should be to drive
           // around the track with 100ms latency.
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
+
+          ///// MY NOTE: latency
+          /////  Latency is the realistic delay will occur as actuation command executed.
+          /////  The latency will need to be considered into MPC for better state predictions.
+          /////  To counter the latency:
+          /////    1. Adjust the dt to match, or use smaller dt.
+          /////    2. Reduce the MPC compute time.
+          /////    3. Slow down the car so that MPC have enough of the time for predictions.
+          /////    4. Shift the states based on the latency (This idea is from class discussions)
+
+          /// this_thread::sleep_for(chrono::milliseconds(10)); /// not much of different under 40 miles/hours.
+
           this_thread::sleep_for(chrono::milliseconds(100));
-          /// this_thread::sleep_for(chrono::milliseconds(10));
+
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
           /*
