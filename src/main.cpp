@@ -67,7 +67,9 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
-// cout helper
+/**
+ * std::cout helper
+ */
 void print_vector(const std::vector<double>& v) {
   for (const auto& i: v) {
       std::cout << i << " ";
@@ -75,7 +77,9 @@ void print_vector(const std::vector<double>& v) {
   std::cout << endl;
 }
 
-// cout helper
+/**
+ * std::cout helper
+ */
 void print_eigne_vector(const Eigen::VectorXd& v) {
   for (int i = 0; i < v.size(); i++) {
       std::cout << v[i] << " ";
@@ -83,7 +87,9 @@ void print_eigne_vector(const Eigen::VectorXd& v) {
   std::cout << endl;
 }
 
-// A wrapper
+/**
+ * An wrapper for polyfit
+ */
 Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   size_t size_x = xs.size();
   size_t size_y = ys.size();
@@ -91,24 +97,24 @@ Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   double* x_ptr = &xs[0];
   double* y_ptr = &ys[0];
 
-  // cout << "std: ";
-  // print_vector(xs);
-  // cout << "std: ";
-  // print_vector(ys);
+  /// cout << "std: ";
+  /// print_vector(xs);
+  /// cout << "std: ";
+  /// print_vector(ys);
 
   Eigen::Map<Eigen::VectorXd> vx(x_ptr, size_x);
   Eigen::Map<Eigen::VectorXd> vy(y_ptr, size_y);
 
-  // cout << "Eigen: ";
-  // print_eigne_vector(vx);
-  // cout << "Eigen: ";
-  // print_eigne_vector(vy);
+  /// cout << "Eigen: ";
+  /// print_eigne_vector(vx);
+  /// cout << "Eigen: ";
+  /// print_eigne_vector(vy);
 
   return polyfit(vx, vy, order);
 }
 
 /**
- * Caculate the distance from point p to line (ps, pe) using linear algebra
+ * Calculate the distance from point p to line (ps, pe) using linear algebra
  * Used in map coordination
  */
 double distance_to_line(double p_start_x, double p_start_y,
@@ -125,7 +131,7 @@ double distance_to_line(double p_start_x, double p_start_y,
   // norm
   double norm_pe_ps = std::sqrt(pe_ps_x*pe_ps_x+pe_ps_y*pe_ps_y);
   double dist = cross_product/norm_pe_ps;
-  // cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
+  /// cout << "cross_product= " << cross_product << " ,norm_pe_ps= "  << norm_pe_ps <<  " ,dist= "  << dist << std::endl;
   return dist;
 }
 
@@ -143,9 +149,11 @@ void to_car_coord (double src_map_x, double src_map_y,
   car_y = -dis_x*std::sin(theta) + dis_y*std::cos(theta);
 }
 
-// debug
+/*
+// DEBUG
 int m_debug_tries = 5;
 int m_debug_try = 0;
+*/
 
 int main() {
   uWS::Hub h;
@@ -161,7 +169,7 @@ int main() {
     string sdata = string(data).substr(0, length);
     /// cout << sdata << endl;
     Eigen::VectorXd state(6);
-    m_debug_try++;
+    /// m_debug_try++;
 
     if (sdata.size() > 2 && sdata[0] == '4' && sdata[1] == '2') {
       string s = hasData(sdata);
@@ -191,9 +199,9 @@ int main() {
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
           for (int i = 0; i < size_points; i++) {
-            // cout << " map coor: " << ptsx[i] << ", " << ptsy[i] << std::endl;
+            /// std:;cout << " map coor: " << ptsx[i] << ", " << ptsy[i] << std::endl;
             to_car_coord(ptsx[i], ptsy[i], psi, px, py, next_x_vals[i], next_y_vals[i]);
-            // cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
+            /// std:;cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
           }
 
           /// auto coeffs = polyfit(ptsx, ptsy, 3);  /// Using map coordinate
@@ -295,9 +303,8 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          // TODO this_thread::sleep_for(chrono::milliseconds(100));
-          // this_thread::sleep_for(chrono::milliseconds(10));
           this_thread::sleep_for(chrono::milliseconds(100));
+          /// this_thread::sleep_for(chrono::milliseconds(10));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
           /*

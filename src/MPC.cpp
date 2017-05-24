@@ -56,6 +56,7 @@ bool isFirstUpdate = true;
 // DEBUG
 int debug_tries = 3;
 int debug_try = 0;
+
 std::vector<double> x_vals = {};
 std::vector<double> y_vals = {};
 std::vector<double> psi_vals = {};
@@ -77,7 +78,9 @@ size_t epsi_start = cte_start + N;
 size_t delta_start = epsi_start + N;
 size_t a_start = delta_start + N - 1;
 
-// Evaluate a polynomial for AD.
+/**
+ * Evaluate a polynomial for AD.
+ */
 AD<double> polyevalAD(Eigen::VectorXd coeffs, AD<double> x) {
   // cout << "polyevalAD: x= " << x << endl;
   AD<double> result = 0.0;
@@ -95,7 +98,7 @@ class FG_eval {
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
   void operator()(ADvector& fg, const ADvector& vars) {
-    // TODO: implement MPC
+    // DONE: implement MPC
     // fg a vector of constraints, x is a vector of constraints.
     // NOTE: You'll probably go back and forth between this function and
     // the Solver function below.
@@ -291,10 +294,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // degrees (values in radians).
   // NOTE: Feel free to change this to something else.
   for (int i = delta_start; i < a_start; i++) {
-    // vars_lowerbound[i] = -0.436332;
-    // vars_upperbound[i] = 0.436332;
-    vars_lowerbound[i] = -0.3;
-    vars_upperbound[i] = 0.3;
+    ///// 40 miles/hour
+    /// Unstable at turns.  vars_lowerbound[i] = -0.436332;
+    /// Unstable at turns.   vars_upperbound[i] = 0.436332;
+    /// Works. A bit of under steering.  vars_lowerbound[i] = -0.3;
+    /// Works. A bit of under steering.  vars_upperbound[i] = 0.3;
+    /// vars_lowerbound[i] = -0.35;
+    /// vars_upperbound[i] = 0.35;
+    vars_lowerbound[i] = -0.39;
+    vars_upperbound[i] = 0.39;
   }
 
   // Acceleration/decceleration upper and lower limits.
@@ -361,14 +369,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   // Cost
   auto cost = solution.obj_value;
   if (cost > 1000) {
-    std::cout << "!!!!! ";   /// visualize the big cost
+    std::cout << "***** ";   /// visualize the big cost
   }
   std::cout << "Cost " << cost << " success " << solution.status<< std::endl;
 
+  /*
   // print out solution
   int n = N-1;
 
-  /*
   for (int i = 0; i < n; i++) {
     cout << "s" << i << ": "
          << solution.x[i + x_start] << " "
@@ -439,6 +447,8 @@ debug_try++;
           solution.x[cte_start + 1], solution.x[epsi_start + 1],
           solution.x[delta_start],   solution.x[a_start]};
   */
+
+  /// Return all solutions for visualization
   int size_ret = (N-1)*8;
   std::vector<double> ret_vector(size_ret);
   for (int i=0; i<N-1; i++) {
