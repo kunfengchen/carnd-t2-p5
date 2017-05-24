@@ -159,7 +159,7 @@ int main() {
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
     string sdata = string(data).substr(0, length);
-    cout << sdata << endl;
+    /// cout << sdata << endl;
     Eigen::VectorXd state(6);
     m_debug_try++;
 
@@ -214,7 +214,7 @@ int main() {
           /// double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Map coordinate
           /// double cte = distance_to_line(next_x_vals[3], next_y_vals[3], next_x_vals[0], next_y_vals[0], 0.0, 0.0);  /// Using Car coordinate
           /// double cte = distance_to_line(next_x_vals[0], next_y_vals[0], next_x_vals[3], next_y_vals[3], 0.0, 0.0);  /// Using Car coordinate
-          double cte = polyeval(coeffs, 0) - 0; /// car coordinates
+          double cte = polyeval(coeffs, car_px) - car_py; /// car coordinates
 
           std::cout << "CTE= " << cte << std::endl;
           // Due to the sign starting at 0, the orientation error is -f'(x).
@@ -233,15 +233,15 @@ int main() {
           }
           */
 
-          cout << "main(): psides= " << psides << endl;
+          /// cout << "main(): psides= " << psides << endl;
 
           /// double epsi = psi - psides;
           double epsi = car_psi - psides;
 
           state << car_px, car_py, car_psi, v, cte, epsi;
 
-          cout << "SIM state: ";
-          print_eigne_vector(state);
+          /// cout << "SIM state: ";
+          /// print_eigne_vector(state);
 
           double steer_value;
           double throttle_value;
@@ -252,10 +252,10 @@ int main() {
           /// print_vector(vars);
           /// cout << endl;
           steer_value = -vars[6];
-          /// steer_value = -0.01;
+          /// debug to stay on the track for the beginning  steer_value = -0.01;
           throttle_value = vars[7];
-          std::cout << "STEER_VALUE= " << steer_value
-                    << " THROTTLE= " << throttle_value << std::endl;
+          /// std::cout << "STEER_VALUE= " << steer_value
+          ///           << " THROTTLE= " << throttle_value << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
@@ -273,7 +273,7 @@ int main() {
             /// to_car_coord(vars[0 + i*8], vars[1 + i*8], psi, px, py, mpc_x_vals[i], mpc_y_vals[i]);
             mpc_x_vals[i] = vars[0 + i*8];
             mpc_y_vals[i] = vars[1 + i*8];
-            cout << " mpc car coor: " << mpc_x_vals[i] << ", " << mpc_y_vals[i] << std::endl;
+            /// cout << " mpc car coor: " << mpc_x_vals[i] << ", " << mpc_y_vals[i] << std::endl;
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
@@ -295,10 +295,12 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
+          // TODO this_thread::sleep_for(chrono::milliseconds(100));
+          // this_thread::sleep_for(chrono::milliseconds(10));
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
-            /*
+          /*
           // DEBUG
           if ((m_debug_try % 2) == 0) {
             matplotlibcpp::figure();
@@ -334,7 +336,7 @@ int main() {
              matplotlibcpp::show();
              std::exit(1);
           }
-             */
+          */
         }
       } else {
         // Manual driving

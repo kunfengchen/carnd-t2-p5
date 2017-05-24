@@ -9,8 +9,18 @@
 using CppAD::AD;
 
 // DONE: Set the timestep length and duration
-size_t N = 15;
+//////// latency 100m seconds
+/// size_t N = 15;
+/// Too big, cause more instabilities or large Costs   size_t N = 20;
+size_t N = 10;
+//// Too small, unstable    double dt = 0.05;
+//// Occationally unstable
+//// make the car wabbling  double dt = 0.05;
+//// Too far of horizon with N=10, no good with N=6,  double dt = 0.2;
 double dt = 0.1;
+//// Cannot finish one loop double dt = 0.2;
+
+//// no good  double dt = 0.15;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -32,7 +42,10 @@ const AD<double> h_ad_double = 1e-8;
 double ref_v = 40;
 
 // set the weights of the error function.
-double w_delta = 100.0;
+
+//// Not mush effect  double w_delta = 1000.0;
+//// Over penalized. Have hard time make turns on 20 miles/hour  double w_delta = 10000.0;
+double w_delta = 100;
 double w_a = 500.0;
 
 std::clock_t cur_time;
@@ -111,8 +124,6 @@ class FG_eval {
     for (int i = 0; i < N - 2; i++) {
       fg[0] += w_delta * CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
       fg[0] += w_a * CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
-      /// fg[0] += CppAD::pow(vars[delta_start + i + 1] - vars[delta_start + i], 2);
-      /// fg[0] += CppAD::pow(vars[a_start + i + 1] - vars[a_start + i], 2);
     }
 
     //
@@ -182,10 +193,8 @@ class FG_eval {
       AD<double> coeffs2 = coeffs[2];
       AD<double> coeffs3 = coeffs[3];
       AD<double> psides0 = CppAD::atan(coeffs1 + (2*coeffs2*x0) + (3*coeffs3*(x0*x0)));
-      // TODO
-      /// psides0 += M_PI;
 
-      cout << "OOOOOop(): psides0= " << psides0 << endl;
+      /// cout << "OOOOOop(): psides0= " << psides0 << endl;
 
       AD<double> ad_dt=dt;
       /// cout << "op(): ad_dt= " << ad_dt << endl;
@@ -205,7 +214,6 @@ class FG_eval {
       fg[2 + y_start + i] = y1 - (y0 + v0 * CppAD::sin(psi0) * ad_dt);
       fg[2 + psi_start + i] = psi1 - (psi0 + v0 * delta0 / ad_Lf * ad_dt);
       fg[2 + v_start + i] = v1 - (v0 + a0 * ad_dt);
-      // TODO: f0 - y0
       /// fg[2 + cte_start + i] =
       ///        cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
@@ -233,8 +241,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   cur_time = std::clock();
   size_n = N;
 
-  // Dynamic dt: Not working yet...
-  // dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
+  /// Dynamic dt:
+  /// Very unstable car running...   dt = (cur_time - pre_time) * 1.0 / CLOCKS_PER_SEC; // delta time per second'
 
   bool ok = true;
   size_t i;
@@ -352,11 +360,15 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
 
   // Cost
   auto cost = solution.obj_value;
+  if (cost > 1000) {
+    std::cout << "!!!!! ";   /// visualize the big cost
+  }
   std::cout << "Cost " << cost << " success " << solution.status<< std::endl;
 
   // print out solution
   int n = N-1;
 
+  /*
   for (int i = 0; i < n; i++) {
     cout << "s" << i << ": "
          << solution.x[i + x_start] << " "
@@ -375,8 +387,9 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
        << solution.x[n + v_start] << " "
        << solution.x[n + cte_start] << " "
        << solution.x[n + epsi_start] << std::endl;
+   */
 
-    /*
+  /*
   for (int i=0; i < 6*N; i++) {
     if (i % N == 0) {
       std::cout << std::endl;
@@ -384,14 +397,14 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
     std::cout << solution.x[i] << " ";
   }
   std::cout << std::endl;
-     */
+  */
 
   /*
   for (int i=6*N; i < solution.x.size(); i++) {
     std::cout << solution.x[i] << " ";
   }
   std::cout << std::endl << std::endl;
-   */
+  */
 
   pre_time = cur_time;
 
