@@ -88,7 +88,7 @@ void print_eigne_vector(const Eigen::VectorXd& v) {
 }
 
 /**
- * An wrapper for polyfit
+ * An wrapper for polyfit to take std::vector<dobule>
  */
 Eigen::VectorXd polyfit(vector<double> xs, vector<double> ys, int order ) {
   size_t size_x = xs.size();
@@ -136,7 +136,7 @@ double distance_to_line(double p_start_x, double p_start_y,
 }
 
 /**
- * Translate coord from map to car
+ * Translate coordinates from map to car
  * Formula suggested from class discussion
  * Counter-clockwise
  */
@@ -204,22 +204,41 @@ int main() {
             /// std:;cout << " car coor: " << next_x_vals[i] << ", " << next_y_vals[i] << std::endl;
           }
 
-          /// auto coeffs = polyfit(ptsx, ptsy, 3);  /// Using map coordinate
+          /// auto coeffs = polyfit(ptsx, ptsy, 3);  /// Using map coordinates
 
-          /// According to class discussion, using car coordiante is easier.
-          /// Car coordinates
-          double car_px = 0.0;
-          double car_py = 0.0;
-          double car_psi = 0.0;
 
-          auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinate
-          // The cross track error is calculated by evaluating at polynomial at x, f(x)
-          // and subtracting y.
+          ///// Kinematic Model
+          ///// State: [location x (x), location y (y), vehicle orientation (psi),
+          /////          speed (v), cross track error (cte), orientation error (epsi)]
+          ///// Actuators: [ steering angle (delta), throttle from -1 to 1 (a)]
+          /////
+          ///// Formula:
+          ///// dt = time changes
+          ///// Lf = distance between the front of hte vehicle and its center of gravity
+          ///// x = x + v * cos(psi) * dt
+          ///// y = y + v * sin(psi) * dt
+          ///// psi = psi + v / Lf * delta * dt
+          ///// v = v + a * dt
+          ///// cte = f(x) - y + (v * sin(epsi) * dt)
+          ///// psides = desired orienation = arctan(f'(x))
+          ///// espi = psi - psides + v / Lf * delta * dt
+
+
+          ///// According to class discussion, using car coordinates is easier.
+          ///// car coordinates
+          double car_px = 0.0;  /// car x location
+          double car_py = 0.0;  /// car y location
+          double car_psi = 0.0; /// car orientation
+
+          auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinates
+
+          ///// The cross track error is calculated by evaluating at polynomial at x, f(x)
+          ///// and subtracting y.
 
           // NOTE: from MPC.cpp
           // cte[t+1] = f(x[t]) - y[t] + v[t] * sin(epsi[t]) * dt
           // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * dt
-          /// double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using Map coordinate
+          /// double cte = distance_to_line(ptsx[3], ptsy[3], ptsx[0], ptsy[0], px, py);  /// Using map coordinate
           /// double cte = distance_to_line(next_x_vals[3], next_y_vals[3], next_x_vals[0], next_y_vals[0], 0.0, 0.0);  /// Using Car coordinate
           /// double cte = distance_to_line(next_x_vals[0], next_y_vals[0], next_x_vals[3], next_y_vals[3], 0.0, 0.0);  /// Using Car coordinate
           double cte = polyeval(coeffs, car_px) - car_py; /// car coordinates
@@ -230,25 +249,29 @@ int main() {
           // double epsi = psi - std::atan(coeffs[1] + (2*coeffs[2]*px) + (3*coeffs[3]*(px*px)));
           // double psides = -std::atan(coeffs[1] + (2*coeffs[2]*ptsx[0]) + (3*coeffs[3]*(ptsx[0]*ptsx[0])));
 
-          //// need to check quardrant ? maybe for Map coordinate
+          //// desired orientation
+          //// need to check quardrant ? maybe for map coordinates
           double psides = std::atan(coeffs[1] + (2*coeffs[2]*car_px) + (3*coeffs[3]*car_px*car_px));
-          /// psides+=pi();
 
-          /*
+          /* For map coordinates
           double psides = std::atan2(ptsy[2]-ptsy[0], ptsx[2]-ptsx[0]);
           if (psides < 0) {
              psides = 2*pi()+psides; // convert (0, -pi) to (pi, 2pi) for third and fourth quadrants.
           }
           */
 
-          /// cout << "main(): psides= " << psides << endl;
+          /// std::cout << "main(): psides= " << psides << endl;
 
-          /// double epsi = psi - psides;
-          double epsi = car_psi - psides;
+          ///// orienatation error
+          /// double epsi = psi - psides;  /// map coordinates
+          double epsi = car_psi - psides;  /// car coordinates
 
+          ///// Update car state (car coodinates):
+          /// car location x, car location y, vehicle orientation,
+          /// cross track error, and orientation error
           state << car_px, car_py, car_psi, v, cte, epsi;
 
-          /// cout << "SIM state: ";
+          /// std::cout << "SIM state: ";
           /// print_eigne_vector(state);
 
           double steer_value;
@@ -256,11 +279,11 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs);
 
-          /// cout << "MPC state: ";
+          /// std::cout << "MPC state: ";
           /// print_vector(vars);
-          /// cout << endl;
-          steer_value = -vars[6];
-          /// debug to stay on the track for the beginning  steer_value = -0.01;
+          /// std::cout << endl;
+          steer_value = -vars[6];  /// steering angle is opposite in simulator
+          /// Debug to stay on the track for the beginning.  steer_value = -0.01;
           throttle_value = vars[7];
           /// std::cout << "STEER_VALUE= " << steer_value
           ///           << " THROTTLE= " << throttle_value << std::endl;
