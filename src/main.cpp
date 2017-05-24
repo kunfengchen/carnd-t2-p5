@@ -8,7 +8,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "MPC.h"
 #include "json.hpp"
-#include "matplotlibcpp.h"
+//// DEBUG only.  #include "matplotlibcpp.h"
 
 
 // for convenience
