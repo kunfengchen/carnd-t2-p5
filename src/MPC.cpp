@@ -13,13 +13,15 @@ using CppAD::AD;
 /// size_t N = 15;
 /// Too big, cause more instabilities or large Costs   size_t N = 20;
 size_t N = 10;
-//// Too small, unstable    double dt = 0.05;
+//// Too small, unstable    double dt = 0.01;
 //// Occationally unstable
-//// make the car wabbling  double dt = 0.05;
+//// make the car wobbling  double dt = 0.05;
 //// Too far of horizon with N=10, no good with N=6,  double dt = 0.2;
-double dt = 0.1;
-//// Cannot finish one loop double dt = 0.2;
+//// double dt = 0.03;  // with N=15, w_delta=500, 40 miles/hour, but tires touch the curbs.
+//// double dt = 0.05;  // with N=15, w_delta=800, reach 50 miles/hour, but tires touch the red lines.
+double dt = 0.1;  /// can only reach 40 miles/hour after good tune with N=10, w_delta=80.
 
+//// Cannot finish one loop double dt = 0.2;
 //// no good  double dt = 0.15;
 
 // This value assumes the model presented in the classroom is used.
@@ -38,14 +40,19 @@ const double Lf = 2.67;
 const AD<double> h_ad_double = 1e-8;
 
 // Both the reference cross track and orientation errors are 0.
-// The reference velocity is set to 40 mph.
-double ref_v = 40;
+// The reference velocity
+/// double ref_v = 40;  /// The tire is very close to yellow line at one point.
+double ref_v = 30;
 
 // set the weights of the error function.
 
-//// Not mush effect  double w_delta = 1000.0;
-//// Over penalized. Have hard time make turns on 20 miles/hour  double w_delta = 10000.0;
-double w_delta = 100;
+/// Not mush effect  double w_delta = 1000.0;
+/// Over penalized. Have hard time make turns on 20 miles/hour  double w_delta = 10000.0;
+/// Good, but a bit under steering.  double w_delta = 100;
+/// OK. Sensetive to turns. Car run wobbly.  double w_delta = 10;
+/// Good. double w_delta = 80;
+double w_delta = 80;
+/// Good. double w_a = 5000.0;
 double w_a = 500.0;
 
 std::clock_t cur_time;
