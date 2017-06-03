@@ -12,6 +12,9 @@ class MPC {
 
   size_t size_n;
 
+  double steer_value = 0.0;
+  double throttle_value = 0.0;
+
   virtual ~MPC();
 
   // Solve the model given an initial state and polynomial coefficients.

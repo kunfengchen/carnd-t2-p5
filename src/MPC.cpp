@@ -71,7 +71,7 @@ const AD<double> h_ad_double = 1e-8;
 /////    Start with ref_v = 20, the car is more stable and easier to debug and turn the prarameters.
 /////    Trie ref_v up to 80, tuning with dt and w_delta and still hard to finish one lap.
 
-double ref_v = 30;
+double ref_v = 25;
 
 // set the weights of the error function.
 
@@ -89,7 +89,8 @@ double ref_v = 30;
 /////   If w_delta is too small, the car is more sensitive and and spinning out control soon.
 /////   If w_delat is too big, the car is tend to more straight, under steering, and then miss the sharp turns.
 
-double w_delta = 80;
+///// OK after latency adjustment   double w_delta = 20;
+double w_delta = 25;
 
 ///// MY NOTE: Overall, w_a doesn't affect too much.
 

@@ -224,11 +224,17 @@ int main() {
           ///// espi = psi - psides + v / Lf * delta * dt
 
 
+          ///// MYNOTE:
           ///// According to class discussion, using car coordinates is easier.
           ///// car coordinates
-          double car_px = 0.0;  /// car x location
-          double car_py = 0.0;  /// car y location
-          double car_psi = 0.0; /// car orientation
+          ///// Adjust the state for latency according to review comments
+          ///// Calculate the state 100 ms later to compensate the latency
+          double dt  = 0.1;   /// equivalent to 100ms, should get the value from mpc.
+          double Lf = 2.67;   /// Should get the value from mpc.
+          double car_px = v * dt;  /// car x location after latency adjustment
+          double car_py = 0;       /// car y location
+          double car_psi = -v * mpc.steer_value / Lf * dt;
+          double car_v = v + mpc.throttle_value * dt;
 
           auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinates
 
@@ -269,7 +275,7 @@ int main() {
           ///// Update car state (car coodinates):
           /// car location x, car location y, vehicle orientation,
           /// cross track error, and orientation error
-          state << car_px, car_py, car_psi, v, cte, epsi;
+          state << car_px, car_py, car_psi, car_v, cte, epsi;
 
           /// std::cout << "SIM state: ";
           /// print_eigne_vector(state);
@@ -287,6 +293,9 @@ int main() {
           throttle_value = vars[7];
           /// std::cout << "STEER_VALUE= " << steer_value
           ///           << " THROTTLE= " << throttle_value << std::endl;
+
+          mpc.steer_value = steer_value;
+          mpc.throttle_value = throttle_value;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
