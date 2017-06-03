@@ -25,10 +25,32 @@ Implement a MPC control to drive a car in simulator
 * cross track error 
 * orientation error
 
+### Kinematic Model
+* State:
+```
+ [location x (x), location y (y), vehicle orientation (psi),
+  speed (v), cross track error (cte), orientation error (epsi)]
+```
+
+* Actuators: [ steering angle (delta), throttle from -1 to 1 (a)]
+
+* Formula:
+```
+ dt = time changes
+ Lf = distance between the front of hte vehicle and its center of gravity
+ x = x + v * cos(psi) * dt
+ y = y + v * sin(psi) * dt
+ psi = psi + v / Lf * delta * dt
+ v = v + a * dt
+ cte = f(x) - y + (v * sin(epsi) * dt)
+ psides = desired orienation = arctan(f'(x))
+ espi = psi - psides + v / Lf * delta * dt       
+```
+
 ### Latency
 * 100 milli seconds
 
-### Adjust for Latency
+### Adjustment for Latency
 * Predict the car state 100 milli secods later in car's cooorinates
 ```
   l_dt  = 0.1;   /// latency equivalent to 100ms.
