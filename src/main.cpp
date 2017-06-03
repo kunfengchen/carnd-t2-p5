@@ -229,12 +229,12 @@ int main() {
           ///// car coordinates
           ///// Adjust the state for latency according to review comments
           ///// Calculate the state 100 ms later to compensate the latency
-          double dt  = 0.1;   /// equivalent to 100ms, should get the value from mpc.
+          double l_dt  = 0.1;   /// latency equivalent to 100ms.
           double Lf = 2.67;   /// Should get the value from mpc.
-          double car_px = v * dt;  /// car x location after latency adjustment
+          double car_px = v * l_dt;  /// car x location after latency adjustment
           double car_py = 0;       /// car y location
-          double car_psi = -v * mpc.steer_value / Lf * dt;
-          double car_v = v + mpc.throttle_value * dt;
+          double car_psi = -v * mpc.steer_value / Lf * l_dt;
+          double car_v = v + mpc.throttle_value * l_dt;
 
           auto coeffs = polyfit(next_x_vals, next_y_vals, 3);  /// Using car coordinates
 

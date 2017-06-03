@@ -45,7 +45,6 @@ size_t N = 10;
 
 double dt = 0.1;  /// can only reach 40 miles/hour after good tune with N=10, w_delta=80.
 
-
 // This value assumes the model presented in the classroom is used.
 //
 // It was obtained by measuring the radius formed by running the vehicle in the
@@ -249,10 +248,10 @@ class FG_eval {
 
       /// cout << "OOOOOop(): psides0= " << psides0 << endl;
 
-      AD<double> ad_dt=dt;
+      AD<double> ad_dt = dt;
       /// cout << "op(): ad_dt= " << ad_dt << endl;
 
-      AD<double> ad_Lf=Lf;
+      AD<double> ad_Lf = Lf;
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
       //
@@ -270,11 +269,11 @@ class FG_eval {
       /// fg[2 + cte_start + i] =
       ///        cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
       fg[2 + cte_start + i] =
-              cte1 - (cte0 + (f0 - y0) + (v0 * CppAD::sin(epsi0) * dt));
+              cte1 - (cte0 + (f0 - y0) + (v0 * CppAD::sin(epsi0) * ad_dt));
       /// fg[2 + cte_start + i] =
       ///         cte1 - (cte0 + (v0 * CppAD::sin(epsi0) * ad_dt));
       fg[2 + epsi_start + i] =
-             epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * ad_dt);
+             epsi1 - ((psi0 - psides0) + v0 * delta0 / ad_Lf * ad_dt);
     }
   }
 };
@@ -282,7 +281,11 @@ class FG_eval {
 //
 // MPC class definition implementation.
 //
-MPC::MPC() {}
+MPC::MPC() {
+  steer_value = 0.0;
+  throttle_value = 0.0;
+}
+
 MPC::~MPC() {}
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
