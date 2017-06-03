@@ -60,3 +60,6 @@ Implement a MPC control to drive a car in simulator
   car_psi = -v * steer_value / Lf * l_dt;   /// car orientation
   car_v = v + throttle_value * l_dt;
 ```          
+
+### Others
+* Please refer to comments in the source code!
