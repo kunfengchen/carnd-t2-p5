@@ -51,7 +51,7 @@ Implement a MPC control to drive a car in simulator
 * 100 milli seconds
 
 ### Adjustment for Latency
-* Predict the car state 100 milli secods later in car's cooorinates
+* Predict the car state 100 milli secods later in car's cooorinates before sending to MPC
 ```
   l_dt  = 0.1;   /// latency equivalent to 100ms.
   Lf = 2.67;
